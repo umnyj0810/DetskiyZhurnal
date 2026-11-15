@@ -188,8 +188,8 @@ fun TemperatureDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
 
 @Composable
 fun MedicineDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var dose by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("Парацетамол") }
+    var dose by remember { mutableStateOf("250") }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Приём лекарства") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
