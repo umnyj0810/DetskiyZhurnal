@@ -226,6 +226,7 @@ fun LoginScreen(auth: FirebaseAuth) {
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalScreen(selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
     childNames: List<String>, onEditNames: () -> Unit, onDelete: (JournalEntry) -> Unit,
