@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -39,13 +40,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("child_journal", MODE_PRIVATE)
 
-        // Anonymous Firebase user: enable Anonymous provider in Firebase Console.
-        auth.signInAnonymously().addOnFailureListener {
-            runOnUiThread { firebaseError = "Firebase вход: ${it.localizedMessage}" }
-        }
-
         setContent {
             MaterialTheme {
+                var currentUser by remember { mutableStateOf(auth.currentUser) }
+                DisposableEffect(Unit) {
+                    val authListener = FirebaseAuth.AuthStateListener { currentUser = it.currentUser }
+                    auth.addAuthStateListener(authListener)
+                    onDispose { auth.removeAuthStateListener(authListener) }
+                }
+                if (currentUser == null) {
+                    LoginScreen(auth)
+                } else {
                 var records by remember { mutableStateOf(loadRecords(prefs.getString("records", "[]") ?: "[]")) }
                 var selectedChild by remember { mutableIntStateOf(0) }
                 var childNames by remember {
@@ -145,6 +150,7 @@ class MainActivity : ComponentActivity() {
                         dialog = null
                     }
                 }
+                }
             }
         }
     }
@@ -190,6 +196,36 @@ private fun saveRecords(records: List<JournalEntry>): String {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoginScreen(auth: FirebaseAuth) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Детский журнал", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(24.dp))
+        OutlinedTextField(value = email, onValueChange = { email = it; error = null }, label = { Text("Электронная почта") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(value = password, onValueChange = { password = it; error = null }, label = { Text("Пароль") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
+        error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = {
+            if (email.isBlank() || password.isBlank()) { error = "Введите email и пароль" }
+            else {
+                loading = true
+                error = null
+                auth.signInWithEmailAndPassword(email.trim(), password).addOnCompleteListener { task ->
+                    loading = false
+                    if (!task.isSuccessful) error = task.exception?.localizedMessage ?: "Не удалось войти"
+                }
+            }
+        }, modifier = Modifier.fillMaxWidth(), enabled = !loading) {
+            if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp)) else Text("Войти")
+        }
+    }
+}
 @Composable
 fun JournalScreen(selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
     childNames: List<String>, onEditNames: () -> Unit, onDelete: (JournalEntry) -> Unit,
