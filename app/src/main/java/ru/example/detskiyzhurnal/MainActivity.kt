@@ -31,6 +31,13 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 var records by remember { mutableStateOf(loadRecords(prefs.getString("records", "[]") ?: "[]")) }
                 var selectedChild by remember { mutableIntStateOf(0) }
+                var childNames by remember {
+                    mutableStateOf(listOf(
+                        prefs.getString("child_name_0", "Ребёнок 1") ?: "Ребёнок 1",
+                        prefs.getString("child_name_1", "Ребёнок 2") ?: "Ребёнок 2"
+                    ))
+                }
+                var showNamesDialog by remember { mutableStateOf(false) }
                 var dialog by remember { mutableStateOf<String?>(null) }
 
                 fun persist(updated: List<JournalEntry>) {
@@ -42,10 +49,26 @@ class MainActivity : ComponentActivity() {
                     selectedChild = selectedChild,
                     onChildSelected = { selectedChild = it },
                     records = records.filter { it.child == selectedChild },
+                    childNames = childNames,
+                    onEditNames = { showNamesDialog = true },
                     onDelete = { entry -> persist(records.filterNot { it.id == entry.id }) },
                     onTemperatureClick = { dialog = "temp" },
                     onMedicineClick = { dialog = "med" }
                 )
+                if (showNamesDialog) {
+                    ChildNamesDialog(
+                        initialNames = childNames,
+                        onDismiss = { showNamesDialog = false },
+                        onSave = { first, second ->
+                            childNames = listOf(first, second)
+                            prefs.edit()
+                                .putString("child_name_0", first)
+                                .putString("child_name_1", second)
+                                .apply()
+                            showNamesDialog = false
+                        }
+                    )
+                }
                 when (dialog) {
                     "temp" -> TemperatureDialog(
                         onDismiss = { dialog = null },
@@ -97,6 +120,7 @@ private fun saveRecords(records: List<JournalEntry>): String {
 @Composable
 fun JournalScreen(
     selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
+    childNames: List<String>, onEditNames: () -> Unit,
     onDelete: (JournalEntry) -> Unit, onTemperatureClick: () -> Unit, onMedicineClick: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.getDefault()) }
@@ -108,9 +132,12 @@ fun JournalScreen(
                     SegmentedButton(selected = selectedChild == index,
                         onClick = { onChildSelected(index) },
                         shape = SegmentedButtonDefaults.itemShape(index, 2)) {
-                        Text("Ребёнок ${index + 1}")
+                        Text(childNames[index])
                     }
                 }
+            }
+            TextButton(onClick = onEditNames, modifier = Modifier.align(Alignment.End)) {
+                Text("Изменить имена детей")
             }
             Text("Добавить запись", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -202,4 +229,45 @@ fun MedicineDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
             TextButton(onClick = { if (name.isNotBlank()) onSave(name.trim(), dose.trim()) }) { Text("Сохранить") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } })
+}
+
+
+@Composable
+fun ChildNamesDialog(
+    initialNames: List<String>,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var first by remember { mutableStateOf(initialNames.getOrElse(0) { "Ребёнок 1" }) }
+    var second by remember { mutableStateOf(initialNames.getOrElse(1) { "Ребёнок 2" }) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Имена детей") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = first,
+                    onValueChange = { first = it },
+                    label = { Text("Первый ребёнок") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = second,
+                    onValueChange = { second = it },
+                    label = { Text("Второй ребёнок") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (first.isNotBlank() && second.isNotBlank()) {
+                    onSave(first.trim(), second.trim())
+                }
+            }) { Text("Сохранить") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        }
+    )
 }
