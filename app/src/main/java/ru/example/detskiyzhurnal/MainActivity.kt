@@ -109,6 +109,7 @@ class MainActivity : ComponentActivity() {
 
                 JournalScreen(
                     accountEmail = currentUser?.email,
+                    onSignOut = { auth.signOut() },
                     selectedChild = selectedChild,
                     onChildSelected = { selectedChild = it },
                     records = records.filter { it.child == selectedChild }.sortedByDescending { it.time },
@@ -229,7 +230,7 @@ fun LoginScreen(auth: FirebaseAuth) {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JournalScreen(accountEmail: String?, selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
+fun JournalScreen(accountEmail: String?, onSignOut: () -> Unit, selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
     childNames: List<String>, onEditNames: () -> Unit, onDelete: (JournalEntry) -> Unit,
     onTemperatureClick: () -> Unit, onMedicineClick: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.getDefault()) }
@@ -242,6 +243,8 @@ fun JournalScreen(accountEmail: String?, selectedChild: Int, onChildSelected: (I
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }, actions = {
+            TextButton(onClick = onSignOut) { Text("Выйти") }
         })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
