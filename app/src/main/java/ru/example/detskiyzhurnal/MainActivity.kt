@@ -108,6 +108,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 JournalScreen(
+                    accountEmail = currentUser?.email,
                     selectedChild = selectedChild,
                     onChildSelected = { selectedChild = it },
                     records = records.filter { it.child == selectedChild }.sortedByDescending { it.time },
@@ -228,11 +229,21 @@ fun LoginScreen(auth: FirebaseAuth) {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JournalScreen(selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
+fun JournalScreen(accountEmail: String?, selectedChild: Int, onChildSelected: (Int) -> Unit, records: List<JournalEntry>,
     childNames: List<String>, onEditNames: () -> Unit, onDelete: (JournalEntry) -> Unit,
     onTemperatureClick: () -> Unit, onMedicineClick: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy · HH:mm", Locale.getDefault()) }
-    Scaffold(topBar = { TopAppBar(title = { Text("Детский журнал") }) }) { padding ->
+    Scaffold(topBar = {
+        TopAppBar(title = {
+            Column {
+                Text("Детский журнал")
+                if (!accountEmail.isNullOrBlank()) {
+                    Text(accountEmail, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        })
+    }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 (0..1).forEach { index ->
